@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var draftKeys: [String: String] = [:]
     @State private var savedIDs: Set<String> = []
     @State private var startupError: String?
+    @State private var updater = AppUpdater()
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
@@ -169,6 +170,39 @@ struct SettingsView: View {
                 Text("Startup")
             } footer: {
                 Text("Move Imager into your Applications folder so it can start reliably at login.")
+            }
+
+            Section {
+                LabeledContent("Version", value: updater.appVersion)
+                Button("Check for Updates") { updater.check() }
+                    .disabled(updater.isBusy)
+                switch updater.status {
+                case .idle:
+                    Text("Check GitHub for a newer release.")
+                        .foregroundStyle(.secondary)
+                case .checking:
+                    Label("Checking…", systemImage: "arrow.triangle.2.circlepath")
+                case .upToDate(let latest):
+                    Label("You're up to date (\(latest)).", systemImage: "checkmark.circle")
+                        .foregroundStyle(Theme.accent)
+                case .available(let version):
+                    Text("Version \(version) is available.")
+                    Button("Download & Install") { updater.install() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.accent)
+                        .disabled(updater.isBusy)
+                case .downloading:
+                    Label("Downloading…", systemImage: "arrow.down.circle")
+                case .installing:
+                    Label("Installing — Imager will relaunch…", systemImage: "gear")
+                case .failed(let message):
+                    Label(message, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Updates")
+            } footer: {
+                Text("Updates come from GitHub releases and install with one click.")
             }
 
             Section("Built-in sources (no key needed)") {
